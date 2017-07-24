@@ -1,0 +1,135 @@
+---
+title: "Independance first and last Names"
+author: "Arthur Charpentier & Baptiste Coulmont"
+date: "July 2017"
+output: rmarkdown::github_document
+---
+
+Here we need to extend the correlation plot, where values are in the interval $[-1,+1]$ to geta function where values are on the real line, following a Gaussian distribution (if components are independent)
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+rm(list=ls())
+library(stringr)
+library(lubridate)
+library(plyr)
+library(data.table)
+library(ggplot2)
+library(ggcorrplot)
+library(dplyr)
+```
+```{r}
+ggcorrplot2 <- function(x, method = c("square", "circle"),
+         outline_colour = "gray",
+         colours = c("blue", "white", "red"),
+         legend_title = "Pr",
+         ggtheme = ggplot2::theme_minimal,
+         title = "",
+         tl.cex = 12, 
+         tl.col = "black", tl.srt = 45,
+         show_legend = TRUE){
+  
+  method <- match.arg(method)
+  
+  corr <- reshape2::melt(x, na.rm = TRUE)
+  corr <- corr %>% 
+    mutate(value_norm = 2*(pnorm(corr$value))-1,
+           value_norm_abs = abs(value_norm),
+           Var1_f = as.numeric(factor(Var1)),
+           Var2_f = as.numeric(factor(Var2)))
+  
+  x_labs <- 
+    corr %>% 
+    select(Var1, Var1_f) %>% 
+    unique()
+  
+  y_labs <- 
+    corr %>% 
+    select(Var2, Var2_f) %>% 
+    unique()
+  
+  # La base du graphique
+  p <- ggplot(corr, aes(x = factor(Var1_f), y = factor(Var2_f), fill = value))
+  
+  if (method == "square")
+    p <- p + geom_tile(colour = outline_colour)
+  else if(method == "circle") {
+    p <- p + 
+      geom_point(aes(size = value_norm_abs), shape = 21) +
+      scale_size(range = c(4, 10)) +
+      guides(size = FALSE)
+  }
+
+  
+   p <- 
+    p + scale_fill_gradient2(low = colours[1], high = colours[3], 
+                           mid = colours[2], midpoint = 0,
+                           space = "Lab", 
+                           name = legend_title) +
+    ggtheme() +
+    theme(axis.text.x = element_text(angle = tl.srt, 
+                                     vjust = 1, 
+                                     size = tl.cex, 
+                                     hjust = 1),
+          axis.text.y = element_text(size = tl.cex)) + 
+    coord_fixed() + 
+    xlab(NULL) + ylab(NULL) +
+    scale_x_discrete(breaks = x_labs$Var1_f, labels = x_labs$Var1) +
+    scale_y_discrete(breaks = y_labs$Var2_f, labels = y_labs$Var2)
+  
+  if (title != "") 
+    p <- p + ggtitle(title)
+  
+  if (!show_legend) 
+    p <- p + theme(legend.position = "none")
+   p
+}
+```
+
+Let us import the datasets from our local drive
+
+```{r}
+cpttf_t <- NULL
+cpttl_t <- NULL
+cpttot_t <- NULLcpttf_c_t <- NULL
+cpttl_c_t <- NULL
+cpttot_c_t <- NULL
+setwd("/home/arthur/Dropbox/Dropbox (Télécom SudParis)/homonymes")
+data=read.csv("tout.csv",sep=";")
+#cpttf <- count(data, wt="PRENOM1")
+#cpttl <- count(data, "NOM")
+#cpttf <- count(cpttf, "PRENOM1, wt_var = "freq")
+#cpttl <-count(cpttl, "NOM", wt_var = "freq")
+#cpttf <- arrange(cpttf, desc(n))
+#cpttl <- arrange(cpttl, desc(n))
+cpttl <- aggregate(data$ARR,by=list(data$NOM),FUN=length)
+cpttl <- cpttl[order(cpttl$x,decreasing=TRUE),]
+cpttf <- aggregate(data$ARR,by=list(data$PRENOM1),FUN=length)
+cpttf <- cpttf[order(cpttf$x,decreasing=TRUE),]
+names(cpttl)=c("NOM","freq")
+names(cpttf)=c("PRENOM1","freq")
+k=15
+LP=cpttf[1:(k),]
+LN=cpttl[1:(k),]
+countnp <- Vectorize(function(x,y){
+  sum( (data$NOM==LN$NOM[x])&(data$PRENOM1==LP$PRENOM1[y]))
+})
+MAT=outer(1:k,1:k,countnp)
+rownames(MAT)=LN$NOM
+colnames(MAT)=LP$PRENOM1
+```
+
+Use here a chi-square test to test independence betweem first and last names, on the $k=15$ most popular ones (only)
+
+```{r}
+Q=chisq.test(MAT)
+Q
+Q$observed
+Q$expected
+```
+
+The plot is here
+
+```{r}
+ggcorrplot2(Q$stdres, method = "circle")
+```
