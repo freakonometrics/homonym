@@ -8,4 +8,4 @@ Proportion of homonyms in France (statics : 2016) https://github.com/freakonomet
 
 Proportion of homonyms in France (dynamics : 3 periods) https://github.com/freakonometrics/homonym/blob/master/homonym_dynamic.md
 
-Proportion of homonyms in Ohio (statics : 2016)
+Proportion of homonyms in Ohio (statics : 2016) https://github.com/freakonometrics/homonym/blob/master/homony-ohio.md
